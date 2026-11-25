@@ -6,11 +6,16 @@ Authors: The QPainleve contributors
 module
 
 public import QPainleve.AlgebraicGeometry.Blowup.Tower.Reorder
+public import QPainleve.AlgebraicGeometry.Blowup.Tower.StrictTransform.Basic
 public import QPainleve.Geometry.Toric.Fan.Ruling.Subdivision
 public import QPainleve.Geometry.Toric.Fan.StarSubdivision.Picard.Hirzebruch
 
+import QPainleve.AlgebraicGeometry.Blowup.Tower.StrictTransform.Prepend
+import QPainleve.AlgebraicGeometry.Blowup.Tower.StrictTransform.Transport
 import QPainleve.AlgebraicGeometry.IdealSheaf.ResidueField
+import QPainleve.AlgebraicGeometry.Scheme.LocalDimension
 import QPainleve.Geometry.Toric.Fan.Ruling.FixedPoint
+import QPainleve.Geometry.Toric.Fan.Subdivision.StrictTransform
 
 /-!
 # Toric preparation of a Hirzebruch resolution
@@ -29,7 +34,7 @@ This is the absent-corner step in Case C of Proposition 8.11 of
 
 public noncomputable section
 
-open AlgebraicGeometry CategoryTheory Module PointedCone
+open AlgebraicGeometry CategoryTheory Module PointedCone TopologicalSpace
 open TauCeti.AlgebraicGeometry TauCeti.Toric
 open LineBundleClass Scheme.IdealSheafData
 
@@ -42,12 +47,79 @@ local notation "X[" Δ "]" => Fan.algebraicRealization Δ
 local notation "I[" σ "]" => Scheme.Hom.ker (Fan.distinguishedPointHom _ σ)
 local notation "tower[" I "]" => BlowupTower.snoc BlowupTower.nil I
 local notation "rays[" Δ "]" => Set.range (Fan.Ray.primitiveGenerator (Phi := Δ))
+local notation "S" => Spec (CommRingCat.of ℂ)
 
 variable (σ : Φ.cones)
 
 local notation "p" => Φ.distinguishedPointHom σ (IsLocalRing.closedPoint ℂ)
 
 variable {n : ℕ} {Y : Scheme} {T : BlowupTower X[Φ] n Y}
+
+private theorem section_coefficients_of_absent_corner
+    {Ψ F : Fan i} (hΦ : Φ.IsRegular) (hΨ : Ψ.IsRegular) (hF : F.IsRegular)
+    (hN : finrank ℤ N = 2) (τ : Ψ.cones)
+    (s : F.IsSubdivision Φ) (t : F.IsSubdivision Ψ)
+    (ρ : Φ.Ray) (ρ' : Ψ.Ray) (hρ : ρ.primitiveGenerator = ρ'.primitiveGenerator)
+    (hρ' : ¬ ρ'.toCone ≤ τ)
+    (g : X[F] ≅ (I[σ]).blowup) (g' : X[F] ≅ (I[τ]).blowup)
+    (hg : g.hom ≫ (I[σ]).blowupToBase = s.toFanHom.algebraicMap)
+    (hg' : g'.hom ≫ (I[τ]).blowupToBase = t.toFanHom.algebraicMap)
+    (hT : IsClosedPointTower X[Φ] T) {q : Y} (hq : IsClosed ({q} : Set Y))
+    (hA : (I[σ]).comap T.toBase = (Y.fromSpecResidueField q).ker)
+    {W Z : Scheme} {L : BlowupTower (I[σ]).blowup n W}
+    {U : BlowupTower (I[τ]).blowup n Z}
+    (hL : IsClosedPointTower (I[σ]).blowup L) (hU : IsClosedPointTower (I[τ]).blowup U)
+    (hτ : IsClosedPointTower X[Ψ] (tower[I[τ]]))
+    (f : ((I[σ]).comap T.toBase).blowup ≅ W) {k : W ≅ Z}
+    (hbase : f.hom ≫ L.toBase ≫ (I[σ]).blowupToBase =
+      ((I[σ]).comap T.toBase).blowupToBase ≫ T.toBase)
+    (hpic : ∀ x : Fin n → ℤ,
+      pullback (f.inv ≫ ((I[σ]).comap T.toBase).blowupToBase) (T.picardHom (0, x)).toMul =
+        ((tower[I[σ]].append L).picardHom (0, Fin.addCases (fun _ : Fin 1 ↦ 0) x)).toMul)
+    (hlift : IsLift (g.symm ≪≫ g') L U k) :
+    (hτ.append hU).strictTransformCoefficients (Ψ.rayBoundaryIdeal hΨ ρ') =
+      Fin.addCases (fun _ : Fin 1 ↦ 0)
+        (hT.strictTransformCoefficients (Φ.rayBoundaryIdeal hΦ ρ)) := by
+  let : Nonempty Φ.cones := ⟨σ⟩
+  let : SmoothOfRelativeDimension 2 (X[Φ] ↘ S) := by
+    rw [Fan.algebraicRealization_over]
+    exact hN ▸ Φ.smoothOfRelativeDimension_algebraicRealizationStructureMap hΦ
+  let : Smooth (X[Φ] ↘ S) := SmoothOfRelativeDimension.smooth 2 _
+  let : IsNoetherian X[Φ] := isNoetherian_of_finiteType (X[Φ] ↘ S)
+  let : TauCeti.AlgebraicGeometry.IsRegular (Φ.rayBoundaryIdeal hΦ ρ).subscheme :=
+    Φ.isRegular_rayBoundary hΦ ρ
+  have hdim : topologicalKrullDim (Φ.rayBoundaryIdeal hΦ ρ).subscheme = 1 := by
+    rw [Φ.rayBoundaryIdeal_def hΦ ρ]
+    exact QPainleve.topologicalKrullDim_vanishingIdeal_subscheme ℂ
+      (topologicalKrullDim_eq_of_smoothOfRelativeDimension (X[Φ] ↘ S) (n := 2)) _
+  have hp := Φ.isClosed_singleton_distinguishedPoint σ
+  have hleft := hT.strictTransformCoefficients_tail_prepend (X[Φ] ↘ S)
+    hp (Φ.distinguishedPointHom σ).ker_eq_ker_fromSpecResidueField hq hA hL f hbase hpic
+    (Φ.isEffectiveCartier_rayBoundaryIdeal hΦ ρ) hdim
+  have hσ : IsClosedPointTower X[Φ] (tower[I[σ]]) :=
+    .snoc .nil _ hp (Φ.distinguishedPointHom σ).ker_eq_ker_fromSpecResidueField
+  have hsrc : g.inv ≫ s.toFanHom.algebraicMap = (tower[I[σ]]).toBase := by
+    rw [← hg, Iso.inv_hom_id_assoc, toBase_snoc, toBase_nil, Category.comp_id]
+  have htgt : g.inv ≫ t.toFanHom.algebraicMap = (g.symm ≪≫ g').hom ≫ (tower[I[τ]]).toBase := by
+    simp only [← hg', Iso.trans_hom, Iso.symm_hom, toBase_snoc, toBase_nil, Category.comp_id,
+      Category.assoc]
+  have hcurve := s.comap_strictTransform_rayBoundaryIdeal t hΦ hΨ hF hN
+    hσ hτ g.inv (g.symm ≪≫ g') hsrc htgt ρ ρ' hρ
+  have htail := hlift.strictTransformCoefficients_eq hL hU
+    (tower[I[τ]].strictTransform (Ψ.rayBoundaryIdeal hΨ ρ'))
+  rw [hcurve] at htail
+  funext j
+  refine Fin.addCases (fun a ↦ ?_) (fun a ↦ ?_) j
+  · classical
+    have ha : a = Fin.last 0 := Fin.ext (by omega)
+    rw [Fin.addCases_left, strictTransformCoefficients_append_castAdd hτ hU, ha,
+      strictTransformCoefficients_snoc_last _ _ _ (Ψ.isClosed_singleton_distinguishedPoint τ)
+        (Ψ.distinguishedPointHom τ).ker_eq_ker_fromSpecResidueField,
+      strictTransform_nil, Ψ.stalkOrder_rayBoundaryIdeal_distinguishedPoint hΨ,
+      ite_eq_right hρ']
+    rfl
+  · rw [Fin.addCases_right, strictTransformCoefficients_append_natAdd hτ hU,
+      ← htail, strictTransform_snoc, strictTransform_nil, hleft]
 
 /-- Transport a specified closed-point resolution across the toric Hirzebruch link
 at a corner absent from its projected centers. The common resolution is obtained by
@@ -59,8 +131,10 @@ value of the original corner.
 
 In the two Picard markings the source coefficients `(a, b)` become `(a + b, b)`.
 The new first exceptional coefficient is `-b`, and all old coefficients retain their
-order, including those at infinitely near points. Taking a negative signed parameter
-moves the Hirzebruch index down by one while preserving the ruling fiber degree. -/
+order, including those at infinitely near points. The strict section also retains its
+old coefficients, with coefficient zero at the reverse corner. Taking a negative
+signed parameter moves the Hirzebruch index down by one while preserving the ruling
+fiber degree. -/
 theorem exists_hirzebruch_toric_link_resolution_of_absent_corner
     (b : Basis (Fin 2) ℤ N) (e : ℤ) (hΦ : Φ.IsRegular) (hc : Φ.IsComplete)
     (hrays : rays[Φ] = {b 0, b 1, -b 0, e • b 0 - b 1})
@@ -106,6 +180,9 @@ theorem exists_hirzebruch_toric_link_resolution_of_absent_corner
           ∀ x ∈ γ.val, Ψ.lattice.realCharacter m x ≤ 0) (j : Fin n),
         Ψ.characterRuling m h₁ (hU'.baseCenter (j.natAdd 1)) =
           Φ.characterRuling m h₀ (hT.baseCenter j)) ∧
+      hU'.strictTransformCoefficients (Ψ.rayBoundaryIdeal hΨ (r' 0)) =
+        Fin.addCases (fun _ : Fin 1 ↦ 0)
+          (hT.strictTransformCoefficients (Φ.rayBoundaryIdeal hΦ (r 0))) ∧
       letI : Nonempty Ψ.cones := hc'.nonempty_cones
       let C := Fan.hirzebruchPicardBasis b e hΦ r hr
       let C' := Fan.hirzebruchPicardBasis d (e + 1) hΨ r' hr'
@@ -151,7 +228,7 @@ theorem exists_hirzebruch_toric_link_resolution_of_absent_corner
     simp only [toBase_snoc, toBase_nil, Category.comp_id]
   refine ⟨q, Ψ, F, hΨ, hF, hc', d, τ, s, t, r, r', hr, hr', g, g', _, R.tower, k, hU,
     hτTower.append hU, hq, hqp, hA, hd₀, hd₁, hτ, hg, hg', hstar, hstar',
-    ?_, ?_, hpts, hfirst, htail, ?_, ?_, ?_⟩
+    ?_, ?_, hpts, hfirst, htail, ?_, ?_, ?_, ?_⟩
   · calc
       _ = f.hom ≫ (R.iso.hom ≫ R.tower.toBase) ≫ g'.inv ≫ s.toFanHom.algebraicMap := by
         simp only [k, Iso.trans_hom, Category.assoc]
@@ -165,6 +242,11 @@ theorem exists_hirzebruch_toric_link_resolution_of_absent_corner
     have hpoint := congrArg (fun f : X[F] ⟶ projectiveLine ℂ ↦ f (g'.inv (hU.baseCenter j)))
       (s.comp_characterRuling_eq t m h₀ h₁)
     simpa only [Scheme.Hom.comp_apply, hpts j, htail j] using hpoint.symm
+  · have hρ := (congrFun hr 0).trans (hd₀.symm.trans (congrFun hr' 0).symm)
+    have hρ' := (r' 0).not_toCone_le_hirzebruch_reverse_corner d τ hτ (congrFun hr' 0)
+    exact section_coefficients_of_absent_corner σ hΦ hΨ hF
+      ((finrank_eq_card_basis b).trans (Fintype.card_fin 2)) τ s t
+      (r 0) (r' 0) hρ hρ' g g' hg hg' hT hq hA hL hU hτTower f hf (hprep 0) R.isLift
   · intro C C' a β m
     have h := congrArg (pullback g'.inv) (hcoord a β 0)
     simp only [add_zero, sub_zero, pullback_comp, Iso.inv_hom_id, pullback_id] at h

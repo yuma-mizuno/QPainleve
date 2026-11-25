@@ -6,6 +6,7 @@ Authors: The QPainleve contributors
 module
 
 public import QPainleve.AlgebraicGeometry.Blowup.Tower.Nodal.Basic
+public import QPainleve.AlgebraicGeometry.Blowup.Tower.StrictTransform.Basic
 public import QPainleve.AlgebraicGeometry.ProjectiveSpectrum.Picard
 public import QPainleve.Geometry.Toric.Fan.Logarithmic.Factorization
 public import QPainleve.Geometry.Toric.Fan.Picard.Hirzebruch
@@ -119,7 +120,9 @@ The signed Hirzebruch parameter changes from `e` to `e + 1`. The two toric steps
 carry the same reduced pole boundary and the same specified map to the plane.
 The fiber coefficient increases by the fiber degree, which is unchanged.
 The reverse corner has that degree as its order, and every retained center comes
-from a common point of the intermediate toric model and keeps its original order. -/
+from a common point of the intermediate toric model and keeps its original order.
+The strict section keeps its coefficients at the retained centers and has
+coefficient zero at the reverse corner. -/
 theorem exists_sarkisov_path_of_absent_corner
     (b : Basis (Fin 2) ℤ N) (e : ℤ) (hΦ : Φ.IsRegular) (hc : Φ.IsComplete)
     (r : Fin 4 ≃ Φ.Ray)
@@ -165,6 +168,9 @@ theorem exists_sarkisov_path_of_absent_corner
           Φ.IsTwoRayStarSubdivision F ∧ B.fan.IsTwoRayStarSubdivision F ∧
           ∀ j : Fin n, ∃ z : X[F],
             π[s] z = hT.baseCenter j ∧ π[t] z = hU.baseCenter (j.natAdd 1)) ∧
+        hU.strictTransformCoefficients (B.fan.rayBoundaryIdeal B.isRegular (r' 0)) =
+          Fin.addCases (fun _ : Fin 1 ↦ 0)
+            (hT.strictTransformCoefficients (Φ.rayBoundaryIdeal hΦ (r 0))) ∧
         let : SmoothOfRelativeDimension 2 f[B.fan] :=
           rankTwo(b) ▸ B.fan.smoothOfRelativeDimension_algebraicRealizationStructureMap B.isRegular
         B[B.fan,B.isComplete].comap U.toBase =
@@ -188,7 +194,8 @@ theorem exists_sarkisov_path_of_absent_corner
     rw [← r.surjective.range_comp, Function.comp_def, hr]
     simp only [Matrix.range_cons, Matrix.range_empty, Set.union_empty, Set.singleton_union]
   obtain ⟨q, Ψ, F, hΨ, hF, hc', d, τ, s, t, r₀, r', hr₀, hr', v, w, Z, U, k, hU, hU',
-    hq, hqp, hJ, -, -, hτ, -, _, hs, ht, hsource, htarget, hcenters, hhead, htail, -, -, hPic⟩ :=
+    hq, hqp, hJ, -, -, hτ, -, _, hs, ht, hsource, htarget, hcenters, hhead, htail,
+    -, -, hsection, hPic⟩ :=
     hT.exists_hirzebruch_toric_link_resolution_of_absent_corner σ b e hΦ hc hrays hσ hp
   have hr₀' : r₀ = r := Equiv.ext fun l ↦ Fan.Ray.primitiveGenerator_injective
     (congrFun (hr₀.trans hr.symm) l)
@@ -252,7 +259,8 @@ theorem exists_sarkisov_path_of_absent_corner
       hT.birationalOver_blowupToBase_comp f[Φ] hq hJ hbir)
   refine ⟨A, B, path, d, r', hr', Z, U', hU', k, hA, hAq.trans (heq_of_eq hq₀),
     (eq_of_heq hBq).trans hq₁, hlen, hrat, hg', hbir', ⟨τ, hτ, hhead⟩,
-    ⟨F, s, t, hs, ht, fun j ↦ ⟨w.inv (hU.baseCenter j), hcenters j, htail j⟩⟩, ?_⟩
+    ⟨F, s, t, hs, ht, fun j ↦ ⟨w.inv (hU.baseCenter j), hcenters j, htail j⟩⟩,
+    hsection, ?_⟩
   intro hdim'
   let := hdim'
   refine ⟨absent_corner_pole_on_target B hU' k ((eq_of_heq hBq).trans hq₁), ?_⟩
@@ -273,7 +281,9 @@ theorem exists_sarkisov_path_of_absent_corner
 `F_e` to `F_{e-1}`. On a single nodal refinement it gives a two-link
 path carrying the prescribed plane map. In the nonnegative markings both
 ruling coefficients and all retained orders stay fixed. The reverse corner
-is on the distinguished section and has order equal to the fiber degree. -/
+is on the opposite section and has order equal to the fiber degree. On the
+positive section all retained strict-transform coefficients stay fixed and
+the reverse corner has coefficient zero. -/
 theorem exists_sarkisov_path_of_absent_positive_corner
     (b : Basis (Fin 2) ℤ N) (e : ℕ) (he : 0 < e) (hΦ : Φ.IsRegular) (hc : Φ.IsComplete)
     (r : Fin 4 ≃ Φ.Ray)
@@ -320,6 +330,9 @@ theorem exists_sarkisov_path_of_absent_positive_corner
           Φ.IsTwoRayStarSubdivision F ∧ B.fan.IsTwoRayStarSubdivision F ∧
           ∀ j : Fin n, ∃ z : X[F],
             π[s] z = hT.baseCenter j ∧ π[t] z = hU.baseCenter (j.natAdd 1)) ∧
+        hU.strictTransformCoefficients (B.fan.rayBoundaryIdeal B.isRegular (r' 2)) =
+          Fin.addCases (fun _ : Fin 1 ↦ 0)
+            (hT.strictTransformCoefficients (Φ.rayBoundaryIdeal hΦ (r 2))) ∧
         let : SmoothOfRelativeDimension 2 f[B.fan] :=
           rankTwo(b) ▸ B.fan.smoothOfRelativeDimension_algebraicRealizationStructureMap B.isRegular
         B[B.fan,B.isComplete].comap U.toBase =
@@ -348,7 +361,7 @@ theorem exists_sarkisov_path_of_absent_positive_corner
     ext u
     simp [Fin.exists_fin_succ, hb₀, hb₁, eq_comm]
   obtain ⟨hR, A, B, path, d₀, s₀, hs₀, Z, U, hU, k, hA, hAh, hB, hlen, hrat, hg', hbir',
-    ⟨τ, hτ, hhead⟩, hcenters, hpole', hmark⟩ :=
+    ⟨τ, hτ, hhead⟩, hcenters, hsection, hpole', hmark⟩ :=
     hT.exists_sarkisov_path_of_absent_corner b₀ (-(e : ℤ)) hΦ hc r₀ hr₀ g hg hbir σ hcone
       hp D hD hNode hpole
   let : J.blowup.Over S := ⟨R.toBase ≫ T.toBase ≫ f[Φ]⟩
@@ -362,9 +375,12 @@ theorem exists_sarkisov_path_of_absent_positive_corner
     B.fan.exists_hirzebruchPicardBasis_opposite_section d₀ e₀ B.isRegular s₀ hs₀
   have hd₀ : d 0 = -d₀ 0 := by simpa [ht₀, congrFun hs₀ 2] using (congrFun ht 0).symm
   have hd₁ : d 1 = d₀ 1 := by simpa [ht₁, congrFun hs₀ 1] using (congrFun ht 1).symm
+  have ht₂ : s 2 = s₀ 0 := Fan.Ray.primitiveGenerator_injective (by
+    simp [congrFun ht 2, congrFun hs₀ 0, hd₀])
   rw [← he₀]
   refine ⟨hR, A, B, path, d, s, ht, Z, U, hU, k, hA, hAh, hB, hlen, hrat, hg', hbir',
-    ⟨τ, by rw [hτ, hd₀, hd₁, Set.pair_comm], hhead⟩, hcenters, hpole', ?_⟩
+    ⟨τ, by rw [hτ, hd₀, hd₁, Set.pair_comm], hhead⟩, hcenters,
+    by simpa only [hs, ht₂] using hsection, hpole', ?_⟩
   intro hNoeth' y C'
   obtain ⟨ha, hβ, hm⟩ := hmark
   rw [(hrepr' y.1).1, (hrepr' y.1).2, ha, hβ, (hrepr x.1).1, (hrepr x.1).2]

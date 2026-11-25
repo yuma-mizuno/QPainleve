@@ -61,6 +61,20 @@ private theorem exceptionalClass_eq_rayClass
       hCartier,
     mk_toInvertibleSheaf_congr _ _ (h.trans (F.rayBoundaryIdeal_def hF ρ))]
 
+/-- The reverse corner, spanned by the fiber ray and the opposite section
+ray, is disjoint from the section with generator `d 0`. -/
+theorem Ray.not_toCone_le_hirzebruch_reverse_corner (ρ : Ψ.Ray) (d : Basis (Fin 2) ℤ N)
+    (τ : Ψ.cones) (ht : τ.val = hull ℝ {i (d 1), i (-d 0)})
+    (hρ : ρ.primitiveGenerator = d 0) : ¬ ρ.toCone ≤ τ := by
+  intro h
+  have hp := (ρ.toCone_le_iff τ).mp h
+  rw [hρ] at hp
+  have hn : -i (d 0) ∈ τ.val := by
+    rw [← map_neg, ht]
+    exact subset_hull (by simp)
+  exact (Ψ.isToricCone τ.property).salient _ hp
+    (fun hzero ↦ d.ne_zero 0 (Ψ.lattice.injective (hzero.trans (map_zero i).symm))) hn
+
 private theorem hirzebruchLink_cornerMembership (b d : Basis (Fin 2) ℤ N)
     (σ : Φ.cones) (τ : Ψ.cones) (r : Fin 4 ≃ Φ.Ray) (r' : Fin 4 ≃ Ψ.Ray)
     (hs : σ.val = hull ℝ (Set.range (i ∘ b)))
@@ -69,20 +83,13 @@ private theorem hirzebruchLink_cornerMembership (b d : Basis (Fin 2) ℤ N)
     (hr'₀ : (r' 0).primitiveGenerator = d 0) (hr'₁ : (r' 1).primitiveGenerator = d 1) :
     (r 0).toCone ≤ σ ∧ (r 1).toCone ≤ σ ∧ (r' 1).toCone ≤ τ ∧ ¬ (r' 0).toCone ≤ τ := by
   refine ⟨((r 0).toCone_le_iff σ).mpr ?_, ((r 1).toCone_le_iff σ).mpr ?_,
-    ((r' 1).toCone_le_iff τ).mpr ?_, fun h ↦ ?_⟩
+    ((r' 1).toCone_le_iff τ).mpr ?_, (r' 0).not_toCone_le_hirzebruch_reverse_corner d τ ht hr'₀⟩
   · rw [hr₀, hs]
     exact subset_hull (Set.mem_range_self (0 : Fin 2))
   · rw [hr₁, hs]
     exact subset_hull (Set.mem_range_self (1 : Fin 2))
   · rw [hr'₁, ht]
     exact subset_hull (by simp)
-  · have hp := ((r' 0).toCone_le_iff τ).mp h
-    rw [hr'₀] at hp
-    have hn : -i (d 0) ∈ τ.val := by
-      rw [← map_neg, ht]
-      exact subset_hull (by simp)
-    exact (Ψ.isToricCone τ.property).salient _ hp
-      (fun hzero ↦ d.ne_zero 0 (Ψ.lattice.injective (hzero.trans (map_zero i).symm))) hn
 
 private theorem hirzebruchLink_pullback_classes
     [Nonempty Φ.cones] [Nonempty Ψ.cones] [Nonempty F.cones]
