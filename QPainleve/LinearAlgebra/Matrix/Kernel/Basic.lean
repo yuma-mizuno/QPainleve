@@ -182,20 +182,37 @@ def intKernelBasisVectors {m n : ℕ} (A : Matrix (Fin m) (Fin n) ℤ) :
   let e := intKernelEquiv A
   ⟨e.1, fun j ↦ (e.2 (Pi.single j 1)).val⟩
 
+/-- The computable coordinate equivalence for the integral basis of the matrix kernel. -/
+def intKernelBasisEquiv {m n : ℕ} (A : Matrix (Fin m) (Fin n) ℤ) :
+    A.mulVecLin.ker ≃ₗ[ℤ] (Fin A.intKernelBasisVectors.1 → ℤ) :=
+  (intKernelEquiv A).2.symm
+
 /-- The integral basis of the matrix kernel whose ambient vectors are computed by
 `intKernelBasisVectors`. -/
 noncomputable def intKernelBasis {m n : ℕ} (A : Matrix (Fin m) (Fin n) ℤ) :
     Basis (Fin A.intKernelBasisVectors.1) ℤ A.mulVecLin.ker :=
-  Basis.ofEquivFun (intKernelEquiv A).2.symm
+  Basis.ofEquivFun A.intKernelBasisEquiv
+
+/-- The computed coordinate equivalence agrees with the basis coordinate equivalence. -/
+@[simp]
+theorem intKernelBasis_equivFun {m n : ℕ} (A : Matrix (Fin m) (Fin n) ℤ) :
+    A.intKernelBasis.equivFun = A.intKernelBasisEquiv :=
+  Basis.equivFun_ofEquivFun _
+
+/-- The inverse coordinate equivalence sends a standard unit vector to the corresponding
+integral kernel basis vector. -/
+@[simp]
+theorem intKernelBasisEquiv_symm_single {m n : ℕ} (A : Matrix (Fin m) (Fin n) ℤ)
+    (j : Fin A.intKernelBasisVectors.1) :
+    A.intKernelBasisEquiv.symm (Pi.single j 1) = A.intKernelBasis j := by
+  rw [← intKernelBasis_equivFun, Basis.equivFun_symm_single]
 
 /-- The ambient coordinates of the integral kernel basis are the computed vectors. -/
 @[simp]
 theorem intKernelBasis_apply {m n : ℕ} (A : Matrix (Fin m) (Fin n) ℤ)
     (j : Fin A.intKernelBasisVectors.1) :
     (A.intKernelBasis j : Fin n → ℤ) = A.intKernelBasisVectors.2 j := by
-  let e := intKernelEquiv A
-  have h (i : Fin e.1) : Basis.ofEquivFun e.2.symm i = e.2 (Pi.single i 1) := by
-    rw [Basis.coe_ofEquivFun, LinearEquiv.symm_symm]
-  exact congrArg Subtype.val (h j)
+  rw [← intKernelBasisEquiv_symm_single]
+  rfl
 
 end Matrix

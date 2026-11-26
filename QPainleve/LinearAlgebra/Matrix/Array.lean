@@ -28,6 +28,15 @@ def LinearMap.materializeMatrix (f : (Fin n → R) →ₗ[R] (Fin m → R)) :
     simpa only [entries, A, Matrix.ofArray_toArray, Matrix.toLin'_apply']
       using Matrix.toLin'_toMatrix' f⟩
 
+/-- Each entry of the stored matrix is a coordinate of the image of a standard unit vector. -/
+@[simp]
+theorem LinearMap.materializeMatrix_apply (f : (Fin n → R) →ₗ[R] (Fin m → R))
+    (i : Fin m) (j : Fin n) :
+    f.materializeMatrix.val i j = f (Pi.single j 1) i := by
+  have h := LinearMap.congr_fun f.materializeMatrix.property (Pi.single j 1)
+  simpa only [Matrix.mulVecLin_apply, Matrix.mulVec_single_one, Matrix.col_apply]
+    using congrFun h i
+
 /-- Implement the forward map of a linear equivalence using an array of its matrix entries.
 The inverse is inherited from the original equivalence. -/
 def LinearEquiv.withCachedMatrix (e : (Fin n → R) ≃ₗ[R] (Fin m → R)) :

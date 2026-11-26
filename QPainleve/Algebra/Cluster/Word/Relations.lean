@@ -6,7 +6,7 @@ Authors: The QPainleve contributors
 module
 
 public import QPainleve.Algebra.Cluster.Tropical.Label
-public import QPainleve.Algebra.Cluster.Word.KernelMatrix
+public import QPainleve.Algebra.Cluster.Word.KernelMatrix.Basic
 public import QPainleve.Algebra.Cluster.Word.Pullback
 
 import QPainleve.Algebra.Cluster.Tropical.Valuation
